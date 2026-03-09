@@ -115,36 +115,36 @@ def setup() -> None:
                 continue
         
 
-        if not full_text:
-            continue
+            if not full_text:
+                continue
 
-        ch = list(chunks(full_text))
-        vecs = embedding_model.encode(ch, normalize_embeddings=True)
+            ch = list(chunks(full_text))
+            vecs = embedding_model.encode(ch, normalize_embeddings=True)
 
-        batch: list[models.PointStruct] = []
-        for chunk_idx, (chunk_text, vec) in enumerate(zip(ch, vecs), start=1):
-            batch.append(
-                models.PointStruct(
-                    id=next_id,
-                    vector=vec.tolist(),
-                    payload={
-                        "paper_id": paper_id,
-                        "chunk_id": chunk_idx,
-                        "text": chunk_text,
-                        "model": MODEL_NAME,
-                        "source_file": name,
-                    },
+            batch: list[models.PointStruct] = []
+            for chunk_idx, (chunk_text, vec) in enumerate(zip(ch, vecs), start=1):
+                batch.append(
+                    models.PointStruct(
+                        id=next_id,
+                        vector=vec.tolist(),
+                        payload={
+                            "paper_id": paper_id,
+                            "chunk_id": chunk_idx,
+                            "text": chunk_text,
+                            "model": MODEL_NAME,
+                            "source_file": name,
+                        },
+                    )
                 )
-            )
 
-            next_id += 1
+                next_id += 1
 
-            if len(batch) >= BATCH:
+                if len(batch) >= BATCH:
+                    client.upsert(collection_name=COLLECTION, points=batch)
+                    batch.clear()
+
+            if batch:
                 client.upsert(collection_name=COLLECTION, points=batch)
-                batch.clear()
-
-        if batch:
-            client.upsert(collection_name=COLLECTION, points=batch)
 
 
 @tool
