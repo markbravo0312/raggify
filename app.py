@@ -40,6 +40,23 @@ def extract_pdf_text(pdf_path: str) -> str:
     return "\n\n".join(parts)
 
 
+def is_pdf_file(path: str) -> bool:
+    try:
+        with open(path, "rb") as f:
+            return f.read(5) == b"%PDF-"
+    except OSError:
+        return False
+
+def is_text_file(path: str, chunk_size: int = 4096) -> bool:
+    try:
+        with open(path, "rb") as f:
+            chunk = f.read(chunk_size)
+        chunk.decode("utf-8")
+        return True
+    except (OSError, UnicodeDecodeError):
+        return False
+
+
 def extract_txt_text(txt_path: str) -> str:
     with open(txt_path, "r", encoding="utf-8", errors="ignore") as f:
         return f.read()
@@ -80,17 +97,24 @@ def setup() -> None:
         )
 
     next_id = 0
-    for name in os.listdir(DATA_DIRECTORY):
-        lower_name = name.lower()
-        if not (lower_name.endswith(".pdf") or lower_name.endswith(".txt")):
-            continue
 
-        pdf_path = os.path.join(DATA_DIRECTORY, name)
-        paper_id = stable_paper_id(pdf_path)
-        if lower_name.endswith(".pdf"):
-            full_text = extract_pdf_text(pdf_path)
-        else:
-            full_text = extract_txt_text(pdf_path)
+
+
+    for root, _, files in os.walk(DATA_DIRECTORY):
+        for name in files:
+            file_path = os.path.join(root, name)
+            lower_name = name.lower()
+            
+            if lower_name.endswith(".pdf") or is_pdf_file(file_path):
+                paper_id = stable_paper_id(file_path)
+                full_text = extract_pdf_text(file_path)
+            elif lower_name.endswith(".txt") or is_text_file(file_path):
+                paper_id = stable_paper_id(file_path)
+                full_text = extract_txt_text(file_path)
+            else:
+                continue
+        
+
         if not full_text:
             continue
 
